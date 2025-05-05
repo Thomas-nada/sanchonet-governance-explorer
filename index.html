@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SanchoNet Governance Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner { display: inline-block; width: 1.5rem; height: 1.5rem; border: 3px solid rgba(0, 0, 0, 0.1); border-radius: 50%; border-top-color: #4f46e5; /* Indigo */ animation: spin 1s ease-in-out infinite; margin-right: 0.5rem; vertical-align: middle; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .nav-link.active { font-weight: 600; color: #4f46e5; border-left: 3px solid #4f46e5; padding-left: 0.75rem; margin-left: -0.75rem;}
+        .content-section { display: none; } /* Hide sections by default */
+        .content-section.active { display: block; } /* Show active section */
+        .clickable-row { cursor: pointer; }
+        /* Ensure preformatted text wraps */
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        /* Styling for details sections */
+        .detail-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; }
+        .detail-box strong { color: #374151; }
+        .detail-box p { margin-bottom: 0.25rem; }
+        .detail-box ul { margin-top: 0.25rem; }
+        .detail-box li { margin-bottom: 0.1rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen">
+
+    <div class="flex flex-col md:flex-row">
+        <nav class="md:w-64 bg-white shadow-md p-4 md:min-h-screen flex-shrink-0">
+            <a href="#home" class="block mb-6 text-2xl font-bold text-indigo-700 hover:text-indigo-900 transition duration-150 ease-in-out" title="Go to Home">
+                Sanchonet Explorer
+            </a>
+            <h2 class="text-lg font-semibold text-gray-600 mb-4 border-b pb-2">Menu</h2>
+            <ul class="space-y-2">
+                <li><a href="#home" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="home-section">Home</a></li>
+                <li><a href="#gov-actions" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="gov-actions-section">Governance Actions</a></li>
+                <li><a href="#dreps" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="dreps-section">DReps</a></li>
+                <li><a href="#cc-members" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="cc-members-section">CC Members</a></li>
+                <li><a href="#spos" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="spos-section">SPOs</a></li>
+                <li><a href="#transactions" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="transactions-section">Transactions</a></li>
+                 <li><a href="#sync-status" class="nav-link block px-3 py-2 rounded hover:bg-gray-100" data-section="sync-status-section">Sync Status</a></li>
+            </ul>
+        </nav>
+
+        <main class="flex-1 p-4 md:p-8 overflow-x-hidden">
+            <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+
+                <div id="loading" class="flex items-center justify-center text-gray-600 my-6 hidden">
+                   <div class="loading-spinner"></div>
+                   <span id="loading-text">Loading...</span>
+                </div>
+
+                <div id="error-message" class="text-center text-red-600 bg-red-100 p-4 rounded-md my-4 hidden"></div>
+
+                <section id="home-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Welcome to the SanchoNet Governance Explorer</h1>
+                    <div id="home-content" class="prose max-w-none">
+                        <p>This explorer allows you to view governance activities and other data from the Cardano SanchoNet testnet.</p>
+                        <p>Use the menu on the left to navigate through:</p>
+                        <ul>
+                            <li>Recent Governance Actions proposed on the network.</li>
+                            <li>Registered Delegated Representatives (DReps) and their voting history.</li>
+                            <li>Registered Constitutional Committee (CC) Members and their voting history.</li>
+                            <li>Registered Stake Pool Operators (SPOs) and their voting history.</li>
+                            <li>Recent Transactions and their details.</li>
+                            <li>The current sync status of the underlying database.</li>
+                        </ul>
+                        <p>This is a tool for observing the ongoing development and testing of Cardano's Voltaire era governance features.</p>
+                    </div>
+                </section>
+
+                <section id="gov-actions-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Governance Actions</h1>
+                    <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Tx</th>
+                                    <th scope="col" class="px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Index</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposed Epoch</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expiration Epoch</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Block Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Anchor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="actions-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="actions-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                        <button id="actions-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="actions-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="actions-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="dreps-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Delegated Representatives (DReps)</h1>
+                     <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">DRep ID (Bech32)</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hash (Hex)</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registered Block</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registered Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Anchor</th>
+                                    </tr>
+                            </thead>
+                            <tbody id="dreps-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="dreps-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                        <button id="dreps-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="dreps-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="dreps-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="drep-votes-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-2 text-center text-indigo-700">DRep Voting History</h1>
+                    <div class="text-center mb-4 text-sm font-mono text-gray-600" id="drep-votes-header"></div>
+                    <button id="back-to-dreps-button" class="mb-4 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">&larr; Back to DRep List</button>
+                    <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Type</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Tx</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Index</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Anchor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drep-votes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="drep-votes-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                         <button id="drep-votes-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="drep-votes-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="drep-votes-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="cc-members-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Constitutional Committee (CC) Members</h1>
+                     <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hash (Hex)</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registered Epoch</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registered Block</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Registered Time</th>
+                                      </tr>
+                            </thead>
+                            <tbody id="cc-members-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="cc-members-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                        <button id="cc-members-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="cc-members-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="cc-members-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="cc-votes-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-2 text-center text-indigo-700">CC Member Voting History</h1>
+                    <div class="text-center mb-4 text-sm font-mono text-gray-600" id="cc-votes-header"></div>
+                    <button id="back-to-cc-button" class="mb-4 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">&larr; Back to CC Member List</button>
+                    <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Type</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Tx</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Index</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Anchor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cc-votes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="cc-votes-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                         <button id="cc-votes-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="cc-votes-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="cc-votes-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="spos-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Stake Pool Operators (SPOs)</h1>
+                     <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Pool ID (Bech32)</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hash (Hex)</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Pledge</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Margin</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fixed Cost</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Metadata</th>
+                                      <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Update Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spos-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="spos-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                        <button id="spos-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="spos-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="spos-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="spo-votes-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-2 text-center text-indigo-700">SPO Voting History</h1>
+                    <div class="text-center mb-4 text-sm font-mono text-gray-600" id="spo-votes-header"></div>
+                    <button id="back-to-spos-button" class="mb-4 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">&larr; Back to SPO List</button>
+                    <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Type</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Proposal Tx</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Index</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Anchor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spo-votes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="spo-votes-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                         <button id="spo-votes-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="spo-votes-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="spo-votes-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="gov-action-detail-section" class="content-section">
+                    <button id="back-to-actions-button" class="mb-4 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">&larr; Back to Action List</button>
+                    <h1 class="text-2xl font-bold mb-4 text-center text-indigo-700">Governance Action Details</h1>
+                    <div id="gov-action-detail-content" class="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm space-y-2 text-sm">
+                        </div>
+                    <div id="gov-action-specific-details" class="mb-6">
+                        </div>
+                    <h2 class="text-xl font-semibold mb-4 text-indigo-600">Votes on this Action</h2>
+                    <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Voter ID</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Time</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vote Anchor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gov-action-votes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                     <div id="gov-action-votes-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                         <button id="gov-action-votes-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                        <div id="gov-action-votes-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                        <button id="gov-action-votes-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                    </div>
+                </section>
+
+                <section id="transactions-section" class="content-section">
+                    <div id="tx-list-view">
+                        <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Recent Transactions</h1>
+                        <div class="overflow-x-auto shadow rounded-lg border border-gray-200 mb-6">
+                            <table id="tx-list-table" class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tx Hash</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Block No</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Output (ADA)</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fee (ADA)</th>
+                                        <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tx-list-table-body" class="bg-white divide-y divide-gray-200">
+                                    </tbody>
+                            </table>
+                        </div>
+                        <div id="tx-list-pagination-controls" class="pagination-controls mt-6 flex items-center justify-between">
+                            <button id="tx-list-prev-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                            <div id="tx-list-pagination-info" class="pagination-info text-sm text-gray-700"></div>
+                            <button id="tx-list-next-button" class="pagination-button px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                    </div>
+
+                    <div id="tx-detail-view" class="hidden">
+                         <button id="back-to-tx-list-button" class="mb-4 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">&larr; Back to Transaction List</button>
+                         <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Transaction Details</h1>
+                         <div id="tx-detail-content">
+                            </div>
+                    </div>
+                </section>
+
+                 <section id="sync-status-section" class="content-section">
+                    <h1 class="text-2xl font-bold mb-6 text-center text-indigo-700">Sync Status</h1>
+                    <div id="sync-status-content" class="text-center text-lg">
+                        Loading status...
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+<script>
+    // --- DOM Elements ---
+    const loadingIndicator = document.getElementById('loading');
+    const loadingText = document.getElementById('loading-text');
+    const errorMessageDiv = document.getElementById('error-message');
+    const contentSections = document.querySelectorAll('.content-section');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    // Section-specific elements
+    const actionsTableBody = document.getElementById('actions-table-body');
+    const drepsTableBody = document.getElementById('dreps-table-body');
+    const ccMembersTableBody = document.getElementById('cc-members-table-body');
+    const sposTableBody = document.getElementById('spos-table-body');
+
+    const drepVotesSection = document.getElementById('drep-votes-section');
+    const drepVotesHeader = document.getElementById('drep-votes-header');
+    const drepVotesTableBody = document.getElementById('drep-votes-table-body');
+    const backToDrepsButton = document.getElementById('back-to-dreps-button');
+
+    const ccVotesSection = document.getElementById('cc-votes-section');
+    const ccVotesHeader = document.getElementById('cc-votes-header');
+    const ccVotesTableBody = document.getElementById('cc-votes-table-body');
+    const backToCcButton = document.getElementById('back-to-cc-button');
+
+    const spoVotesSection = document.getElementById('spo-votes-section');
+    const spoVotesHeader = document.getElementById('spo-votes-header');
+    const spoVotesTableBody = document.getElementById('spo-votes-table-body');
+    const backToSposButton = document.getElementById('back-to-spos-button');
+
+    const govActionDetailSection = document.getElementById('gov-action-detail-section');
+    const govActionDetailContent = document.getElementById('gov-action-detail-content');
+    const govActionSpecificDetails = document.getElementById('gov-action-specific-details'); // Added element for specific details
+    const govActionVotesTableBody = document.getElementById('gov-action-votes-table-body');
+    const backToActionsButton = document.getElementById('back-to-actions-button');
+
+    const syncStatusContent = document.getElementById('sync-status-content');
+
+    // Transaction Section Elements
+    const transactionsSection = document.getElementById('transactions-section');
+    const txListView = document.getElementById('tx-list-view');
+    const txListTableBody = document.getElementById('tx-list-table-body');
+    const txListPaginationInfo = document.getElementById('tx-list-pagination-info');
+    const txListPrevButton = document.getElementById('tx-list-prev-button');
+    const txListNextButton = document.getElementById('tx-list-next-button');
+    const txDetailView = document.getElementById('tx-detail-view');
+    const txDetailContent = document.getElementById('tx-detail-content');
+    const backToTxListButton = document.getElementById('back-to-tx-list-button');
+
+    // Home Section Element
+    const homeContent = document.getElementById('home-content');
+
+
+    // --- API Base URLs ---
+    const API_BASE = 'http://localhost:3000/api';
+
+    // --- State ---
+    let currentSection = 'home-section'; // Default section on load
+    const paginationState = {
+        'home-section': { }, // No pagination needed
+        'gov-actions-section': { currentPage: 1, totalPages: 1, limit: 20, apiUrl: `${API_BASE}/gov/actions`, data: null },
+        'dreps-section': { currentPage: 1, totalPages: 1, limit: 20, apiUrl: `${API_BASE}/gov/dreps`, data: null },
+        'cc-members-section': { currentPage: 1, totalPages: 1, limit: 20, apiUrl: `${API_BASE}/gov/cc/members`, data: null },
+        'spos-section': { currentPage: 1, totalPages: 1, limit: 50, apiUrl: `${API_BASE}/gov/spos`, data: null },
+        'transactions-section': { currentPage: 1, totalPages: 1, limit: 20, apiUrl: `${API_BASE}/txs`, data: null }, // For tx list
+        'drep-votes-section': { currentPage: 1, totalPages: 1, limit: 50, apiUrl: '' },
+        'cc-votes-section': { currentPage: 1, totalPages: 1, limit: 50, apiUrl: '' },
+        'spo-votes-section': { currentPage: 1, totalPages: 1, limit: 50, apiUrl: '' },
+        'gov-action-detail-section': { currentPage: 1, totalPages: 1, limit: 50, apiUrl: '' },
+    };
+
+    // --- Helper Functions ---
+
+    /** Shows loading indicator, clears relevant content */
+    function showLoading(sectionId, text = 'Loading...') {
+        loadingText.textContent = text;
+        loadingIndicator.style.display = 'flex';
+        errorMessageDiv.classList.add('hidden');
+
+        // Clear table bodies
+        const tableBody = document.getElementById(sectionId.replace('-section', '-table-body'));
+        if (tableBody) tableBody.innerHTML = '';
+
+        // Clear specific content areas
+        if (sectionId === 'gov-action-detail-section') {
+            govActionDetailContent.innerHTML = '';
+            govActionSpecificDetails.innerHTML = '';
+            govActionVotesTableBody.innerHTML = '';
+        }
+        if (sectionId === 'transactions-section') {
+            txListTableBody.innerHTML = ''; // Clear list table
+            txDetailContent.innerHTML = ''; // Clear detail content
+            // Visibility handled by setActiveSection/showTransactionDetails
+        }
+        if (sectionId === 'sync-status-section') syncStatusContent.innerHTML = '';
+        if (sectionId === 'home-section') homeContent.innerHTML = ''; // Clear home content if needed
+
+        // Disable pagination
+        document.querySelectorAll('.pagination-button').forEach(btn => btn.disabled = true);
+        document.querySelectorAll('.pagination-info').forEach(info => info.textContent = '');
+    }
+
+    /** Hides loading indicator */
+    function hideLoading() {
+        loadingIndicator.style.display = 'none';
+    }
+
+    /** Displays error message */
+    function showError(message, elementId = 'error-message') {
+        const errorDiv = document.getElementById(elementId);
+         if(errorDiv) {
+             errorDiv.textContent = `Failed to load data: ${message}`;
+             errorDiv.classList.remove('hidden');
+         } else { console.error("Error display element not found:", elementId); }
+         hideLoading();
+    }
+
+    /** Formats hash string */
+    function formatHash(hash, length = 10) {
+        if (!hash) return 'N/A';
+        const hashStr = String(hash);
+        if (hashStr.length <= length * 2) return hashStr;
+        return `${hashStr.substring(0, length)}...${hashStr.substring(hashStr.length - length)}`;
+    }
+
+    /** Formats ISO timestamp */
+    function formatTimestamp(isoString) {
+        if (!isoString) return 'N/A';
+        try {
+            return new Date(isoString).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        } catch (e) { return 'Invalid Date'; }
+    }
+
+    /** Creates anchor link HTML */
+    function createAnchorLink(url, dataHash) {
+         if (url) {
+             const displayUrl = url.length > 30 ? url.substring(0, 30) + '...' : url;
+             if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('ipfs://')) {
+                 return `<a href="${url}" target="_blank" rel="noopener noreferrer" title="${url}" class="text-indigo-600 hover:text-indigo-800 hover:underline">${displayUrl}</a>`;
+             } else {
+                  return `<span title="Potential URL (no protocol): ${url}">${displayUrl}</span>`;
+             }
+         } else if (dataHash) {
+             return `<span class="font-mono text-xs text-gray-600" title="Data Hash: ${dataHash}">${formatHash(dataHash, 8)}</span>`;
+         }
+         return '<span class="text-gray-400">N/A</span>';
+    }
+
+    /** Formats ADA value */
+    function formatAda(lovelace) {
+        if (lovelace === null || lovelace === undefined) return '0';
+        try {
+            const ada = Number(BigInt(String(lovelace))) / 1000000;
+            return ada.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+        } catch (e) {
+            console.error("Error formatting Lovelace:", lovelace, e);
+            return 'Invalid Amount';
+        }
+    }
+
+    /** Decodes hex to UTF8 */
+    function decodeHexToUtf8(hexString) {
+        if (!hexString) return '';
+        try {
+            if (!/^[0-9a-fA-F]*$/.test(hexString) || hexString.length % 2 !== 0) {
+                 return `(Invalid Hex: ${hexString})`;
+            }
+            const bytes = new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const decoder = new TextDecoder('utf-8', { fatal: true });
+            const decoded = decoder.decode(bytes);
+            if (/^[\x20-\x7E\s]+$/.test(decoded) || decoded.length === 0) {
+                return decoded;
+            } else {
+                return `(Hex: ${hexString})`;
+            }
+        } catch (e) {
+            return `(Hex: ${hexString})`;
+        }
+    }
+
+
+     // --- Generic Fetch Data Function (for list views) ---
+     async function fetchData(sectionId, page = 1) {
+         const state = paginationState[sectionId];
+         if (!state || !state.apiUrl) {
+             console.warn("fetchData called for non-list or unconfigured section:", sectionId);
+             if (sectionId === 'sync-status-section') { fetchSyncStatus(); }
+             return;
+         }
+
+         showLoading(sectionId, `Loading ${sectionId.split('-')[0]}...`);
+         state.currentPage = page;
+         const apiUrl = `${state.apiUrl}?page=${state.currentPage}&limit=${state.limit}`;
+
+         try {
+             const response = await fetch(apiUrl);
+             if (!response.ok) {
+                 let errorData;
+                 try { errorData = await response.json(); } catch (e) { /* ignore */ }
+                 throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`);
+             }
+             const data = await response.json();
+             state.totalPages = data.totalPages || 1;
+             state.data = data;
+
+             // Call the appropriate rendering function based on the section
+             switch (sectionId) {
+                 case 'gov-actions-section': renderGovActions(data); break;
+                 case 'dreps-section': renderDreps(data); break;
+                 case 'cc-members-section': renderCCMembers(data); break;
+                 case 'spos-section': renderSPOs(data); break;
+                 case 'transactions-section': renderTransactionsList(data); break; // Call new renderer
+             }
+              updatePaginationControls(sectionId);
+
+         } catch (error) {
+             console.error(`Error fetching data for ${sectionId}:`, error);
+             showError(error.message);
+             const tableBody = document.getElementById(sectionId.replace('-section', '-table-body'));
+             if (tableBody) renderNoDataRow(tableBody, 5); // Adjust colspan
+         } finally { hideLoading(); }
+     }
+
+    // --- Rendering Functions ---
+
+    /** Renders Governance Actions list */
+    function renderGovActions(data) {
+        actionsTableBody.innerHTML = '';
+        if (data && data.actions && data.actions.length > 0) {
+            data.actions.forEach(action => {
+                const row = actionsTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50', 'cursor-pointer', 'action-row');
+                row.dataset.txhash = action.proposal_tx_hash;
+                row.dataset.index = action.proposal_index;
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${action.type || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono" title="${action.proposal_tx_hash}">
+                        ${formatHash(action.proposal_tx_hash)}
+                    </td>
+                    <td class="px-2 py-3 whitespace-nowrap text-sm text-gray-700 text-center">${action.proposal_index !== null ? action.proposal_index : 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${action.proposal_epoch || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${action.proposal_expiration || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(action.proposal_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(action.anchor_url, action.anchor_data_hash)}</td>
+                `;
+            });
+        } else { renderNoDataRow(actionsTableBody, 7); }
+    }
+
+    /** Renders DReps list */
+    function renderDreps(data) {
+        drepsTableBody.innerHTML = '';
+         if (data && data.dreps && data.dreps.length > 0) {
+            data.dreps.forEach(drep => {
+                const row = drepsTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                const drepId = drep.drep_id_bech32 || drep.drep_hash_hex;
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <a href="#drep/${drepId}" class="drep-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Votes for ${drepId}" data-drepid="${drepId}">${formatHash(drep.drep_id_bech32, 15) || formatHash(drep.drep_hash_hex)}</a>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono" title="${drep.drep_hash_hex}">${formatHash(drep.drep_hash_hex)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${drep.registration_block_no?.toLocaleString() || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(drep.registration_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(drep.anchor_url, drep.anchor_data_hash)}</td>
+                   `;
+             });
+         } else { renderNoDataRow(drepsTableBody, 5); }
+    }
+
+    /** Renders CC Members list */
+    function renderCCMembers(data) {
+        ccMembersTableBody.innerHTML = '';
+         if (data && data.members && data.members.length > 0) {
+            data.members.forEach(member => {
+                const row = ccMembersTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">
+                         <a href="#cc/${member.committee_hash_hex}" class="cc-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Votes for ${member.committee_hash_hex}" data-cchash="${member.committee_hash_hex}">${formatHash(member.committee_hash_hex)}</a>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${member.registration_epoch || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${member.registration_block_no?.toLocaleString() || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(member.registration_block_time)}</td>
+                    `;
+             });
+         } else { renderNoDataRow(ccMembersTableBody, 4); }
+    }
+
+    /** Renders SPOs list */
+    function renderSPOs(data) {
+        sposTableBody.innerHTML = '';
+         if (data && data.spos && data.spos.length > 0) {
+            data.spos.forEach(spo => {
+                const row = sposTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                const pledgeAda = formatAda(spo.pledge);
+                const fixedCostAda = formatAda(spo.fixed_cost);
+                const marginPercent = spo.margin !== null ? (spo.margin * 100).toFixed(4) + '%' : 'N/A';
+                const metadataLink = spo.metadata_url ? createAnchorLink(spo.metadata_url, spo.metadata_hash) : (spo.metadata_hash ? `Hash: ${formatHash(spo.metadata_hash)}` : 'N/A');
+                const poolId = spo.pool_id_bech32 || spo.pool_hash_hex;
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                         <a href="#spo/${poolId}" class="spo-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Votes for ${poolId}" data-poolid="${poolId}">${formatHash(spo.pool_id_bech32, 15) || formatHash(spo.pool_hash_hex)}</a>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono" title="${spo.pool_hash_hex}">${formatHash(spo.pool_hash_hex)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">${pledgeAda} ADA</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">${marginPercent}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">${fixedCostAda} ADA</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${metadataLink}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(spo.latest_update_block_time)}</td>
+                   `;
+             });
+         } else { renderNoDataRow(sposTableBody, 7); }
+    }
+
+    /** Renders votes for a specific CC Member */
+    function renderCCVotes(data, ccHash) {
+        ccVotesTableBody.innerHTML = '';
+        ccVotesHeader.textContent = `Votes by CC Member: ${formatHash(ccHash)}`;
+        if (data && data.votes && data.votes.length > 0) {
+            data.votes.forEach(vote => {
+                const row = ccVotesTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                const proposalTxLink = `<a href="#tx/${vote.proposal_tx_hash}" class="tx-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Proposal Tx: ${vote.proposal_tx_hash}" data-txhash="${vote.proposal_tx_hash}">${formatHash(vote.proposal_tx_hash)}</a>`;
+                let voteClass = 'text-gray-700';
+                if (vote.vote === 'Yes') voteClass = 'text-green-600 font-semibold';
+                if (vote.vote === 'No') voteClass = 'text-red-600 font-semibold';
+                if (vote.vote === 'Abstain') voteClass = 'text-yellow-600 font-semibold';
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm ${voteClass}">${vote.vote || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${vote.proposal_type || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${proposalTxLink}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">${vote.proposal_index !== null ? vote.proposal_index : 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(vote.vote_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(vote.anchor_url, vote.anchor_data_hash)}</td>
+                `;
+            });
+        } else { renderNoDataRow(ccVotesTableBody, 6); }
+    }
+
+    /** Renders votes for a specific DRep */
+    function renderDRepVotes(data, drepId) {
+        drepVotesTableBody.innerHTML = '';
+        drepVotesHeader.textContent = `Votes by DRep: ${formatHash(drepId, 15)}`;
+        if (data && data.votes && data.votes.length > 0) {
+            data.votes.forEach(vote => {
+                const row = drepVotesTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                const proposalTxLink = `<a href="#tx/${vote.proposal_tx_hash}" class="tx-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Proposal Tx: ${vote.proposal_tx_hash}" data-txhash="${vote.proposal_tx_hash}">${formatHash(vote.proposal_tx_hash)}</a>`;
+                let voteClass = 'text-gray-700';
+                if (vote.vote === 'Yes') voteClass = 'text-green-600 font-semibold';
+                if (vote.vote === 'No') voteClass = 'text-red-600 font-semibold';
+                if (vote.vote === 'Abstain') voteClass = 'text-yellow-600 font-semibold';
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm ${voteClass}">${vote.vote || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${vote.proposal_type || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${proposalTxLink}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">${vote.proposal_index !== null ? vote.proposal_index : 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(vote.vote_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(vote.anchor_url, vote.anchor_data_hash)}</td>
+                `;
+            });
+        } else { renderNoDataRow(drepVotesTableBody, 6); }
+    }
+
+    /** Renders votes for a specific SPO */
+    function renderSPOVotes(data, poolId) {
+        spoVotesTableBody.innerHTML = '';
+        spoVotesHeader.textContent = `Votes by SPO: ${formatHash(poolId, 15)}`;
+        if (data && data.votes && data.votes.length > 0) {
+            data.votes.forEach(vote => {
+                const row = spoVotesTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                const proposalTxLink = `<a href="#tx/${vote.proposal_tx_hash}" class="tx-link text-indigo-600 hover:text-indigo-800 hover:underline" title="View Proposal Tx: ${vote.proposal_tx_hash}" data-txhash="${vote.proposal_tx_hash}">${formatHash(vote.proposal_tx_hash)}</a>`;
+                let voteClass = 'text-gray-700';
+                if (vote.vote === 'Yes') voteClass = 'text-green-600 font-semibold';
+                if (vote.vote === 'No') voteClass = 'text-red-600 font-semibold';
+                if (vote.vote === 'Abstain') voteClass = 'text-yellow-600 font-semibold';
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm ${voteClass}">${vote.vote || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${vote.proposal_type || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">${proposalTxLink}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-center">${vote.proposal_index !== null ? vote.proposal_index : 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(vote.vote_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(vote.anchor_url, vote.anchor_data_hash)}</td>
+                `;
+            });
+        } else { renderNoDataRow(spoVotesTableBody, 6); }
+    }
+
+    /** Renders votes for a specific Governance Action */
+    function renderGovActionVotes(data) {
+        govActionVotesTableBody.innerHTML = '';
+        if (data && data.votes && data.votes.length > 0) {
+            data.votes.forEach(vote => {
+                const row = govActionVotesTableBody.insertRow();
+                row.classList.add('hover:bg-gray-50');
+                let voterIdDisplay = 'N/A';
+                let voterLink = '#';
+                let voterTitle = '';
+
+                // Determine voter type and create appropriate link/display text
+                if (vote.voter_role === 'DRep' && vote.drep_voter_id) {
+                    voterIdDisplay = `DRep ID: ${vote.drep_voter_id} (Needs Bech32)`;
+                    voterTitle = `DRep Voter DB ID: ${vote.drep_voter_id}`;
+                } else if (vote.voter_role === 'SPO' && vote.pool_voter_id) {
+                     voterIdDisplay = `Pool ID: ${vote.pool_voter_id} (Needs Bech32/Hex)`;
+                     voterTitle = `SPO Voter DB ID: ${vote.pool_voter_id}`;
+                } else if (vote.voter_role === 'ConstitutionalCommittee' && vote.committee_voter_id) {
+                     voterIdDisplay = `CC ID: ${vote.committee_voter_id} (Needs Hex)`;
+                     voterTitle = `CC Voter DB ID: ${vote.committee_voter_id}`;
+                }
+
+                let voteClass = 'text-gray-700';
+                if (vote.vote === 'Yes') voteClass = 'text-green-600 font-semibold';
+                if (vote.vote === 'No') voteClass = 'text-red-600 font-semibold';
+                if (vote.vote === 'Abstain') voteClass = 'text-yellow-600 font-semibold';
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${vote.voter_role || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500" title="${voterTitle}">
+                        ${voterIdDisplay}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm ${voteClass}">${vote.vote || 'N/A'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatTimestamp(vote.vote_block_time)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm">${createAnchorLink(vote.anchor_url, vote.anchor_data_hash)}</td>
+                `;
+            });
+        } else { renderNoDataRow(govActionVotesTableBody, 5); }
+    }
+
+    /** Fetches and displays the DB sync status */
+     async function fetchSyncStatus() {
+          showLoading('sync-status-section', 'Fetching sync status...');
+          try {
+              const response = await fetch(`${API_BASE}/sync-status`);
+               if (!response.ok) { let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ } throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`); }
+               const data = await response.json();
+               syncStatusContent.textContent = `Database is synced up to block: ${data.latest_known_block_number?.toLocaleString() || 'N/A'}`;
+           } catch (error) { console.error('Error fetching sync status:', error); showError(`Sync Status: ${error.message}`); syncStatusContent.textContent = 'Could not fetch sync status.';
+           } finally { hideLoading(); }
+       }
+
+    /**
+     * Fetches and displays full details for a given transaction hash.
+     * @param {string} txHash - The 64-character hex transaction hash.
+     */
+    async function showTransactionDetails(txHash) {
+        console.log("Fetching details for tx:", txHash);
+        // Don't call setActiveSection here, as it might trigger list fetch
+        // Instead, directly manage visibility
+        contentSections.forEach(section => section.classList.remove('active'));
+        transactionsSection.classList.add('active');
+        txListView.classList.add('hidden'); // Hide list view
+        txDetailView.classList.remove('hidden'); // Show detail view
+        showLoading('transactions-section', `Loading details for tx ${formatHash(txHash)}...`); // Show loading in the section
+        txDetailContent.innerHTML = ''; // Clear previous detail content
+
+        try {
+            const response = await fetch(`${API_BASE}/txs/${txHash}`);
+            if (!response.ok) {
+                let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ }
+                if (response.status === 404) { throw new Error(`Transaction ${formatHash(txHash)} not found.`); }
+                throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`);
+            }
+            const txData = await response.json();
+
+            // --- Render Summary Section ---
+            let summaryHtml = `<h2 class="text-xl font-semibold mb-4 break-all">Transaction: ${txData.hash}</h2>`;
+            summaryHtml += '<div class="space-y-2 text-sm grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mb-6 border-b border-gray-200 pb-4">';
+            summaryHtml += `<p><strong>Block:</strong> <a href="#block/${txData.block_no}" class="text-indigo-600 hover:underline">${txData.block_no?.toLocaleString() || 'N/A'}</a> (Epoch ${txData.epoch_no || 'N/A'}, Slot ${txData.slot_no?.toLocaleString() || 'N/A'})</p>`;
+            summaryHtml += `<p><strong>Block Time:</strong> ${formatTimestamp(txData.block_time)}</p>`;
+            summaryHtml += `<p><strong>Status:</strong> <span class="${txData.valid_contract === false ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}">${txData.valid_contract === false ? 'Failed (Script Invalid)' : 'Successful'}</span></p>`;
+            summaryHtml += `<p><strong>Fee:</strong> ${formatAda(txData.fee_lovelace)} ADA</p>`;
+            summaryHtml += `<p><strong>Total Output:</strong> ${formatAda(txData.output_sum_lovelace)} ADA</p>`;
+            summaryHtml += `<p><strong>Deposit:</strong> ${formatAda(txData.deposit)} ADA</p>`;
+            summaryHtml += `<p><strong>Size:</strong> ${txData.size?.toLocaleString() || 'N/A'} bytes</p>`;
+            summaryHtml += `<p><strong>Invalid Before Slot:</strong> ${txData.invalid_before?.toLocaleString() || 'N/A'}</p>`;
+            summaryHtml += `<p><strong>Invalid Hereafter Slot:</strong> ${txData.invalid_hereafter?.toLocaleString() || 'N/A'}</p>`;
+            summaryHtml += `<p><strong>Script Size:</strong> ${txData.script_size?.toLocaleString() || '0'} bytes</p>`;
+            summaryHtml += '</div>';
+
+            // --- Render Inputs Section ---
+            let inputsHtml = '<h3 class="text-lg font-semibold mt-6 mb-3">Inputs</h3>';
+            if (txData.inputs && txData.inputs.length > 0) {
+                inputsHtml += '<div class="space-y-3">';
+                txData.inputs.forEach(input => {
+                    inputsHtml += `<div class="border rounded-md p-3 bg-gray-50 text-xs md:text-sm shadow-sm">`;
+                    inputsHtml += `<p class="mb-1"><strong>From Tx:</strong> <a href="#tx/${input.source_tx_hash}" class="tx-link text-indigo-600 hover:underline font-mono" data-txhash="${input.source_tx_hash}">${formatHash(input.source_tx_hash)}</a> #${input.source_output_index}</p>`;
+                    inputsHtml += `<p class="font-mono break-all text-gray-600"><strong>Address:</strong> ${input.source_address_bech32 || 'N/A'}</p>`;
+                    inputsHtml += `<p><strong>Amount:</strong> <span class="font-semibold text-red-700">-${formatAda(input.value_lovelace)} ADA</span></p>`;
+                    if (input.collateral) {
+                         inputsHtml += `<p class="text-orange-600 font-semibold mt-1">Collateral Input</p>`;
+                    }
+                     inputsHtml += '</div>';
+                });
+                inputsHtml += '</div>';
+            } else {
+                inputsHtml += '<p class="text-gray-500">No inputs found (e.g., genesis or reward payout transaction).</p>';
+            }
+
+            // --- Render Outputs Section ---
+            let outputsHtml = '<h3 class="text-lg font-semibold mt-6 mb-3">Outputs</h3>';
+            if (txData.outputs && txData.outputs.length > 0) {
+                outputsHtml += '<div class="space-y-3">';
+                txData.outputs.forEach((output) => {
+                    outputsHtml += `<div class="border rounded-md p-3 bg-gray-50 text-xs md:text-sm shadow-sm">`;
+                    outputsHtml += `<p class="mb-1"><strong class="text-gray-700">Output Index:</strong> ${output.index}</p>`;
+                    outputsHtml += `<p class="font-mono break-all text-gray-600"><strong>Address:</strong> ${output.output_address_bech32 || 'N/A'}</p>`;
+                    if(output.stake_address) { outputsHtml += `<p><strong>Stake Address:</strong> <a href="#stake/${output.stake_address}" class="text-indigo-600 hover:underline font-mono">${output.stake_address}</a></p>`; }
+                    else { outputsHtml += `<p><strong>Stake Address:</strong> <span class="text-gray-500">None</span></p>`; }
+                    outputsHtml += `<p><strong>Amount:</strong> <span class="font-semibold text-green-700">+${formatAda(output.value_lovelace)} ADA</span></p>`;
+
+                    // Display Multi-Assets
+                    if (output.multi_assets && output.multi_assets.length > 0) {
+                        outputsHtml += `<div class="mt-2 pt-2 border-t border-gray-200">`;
+                        outputsHtml += `<strong class="text-gray-700">Native Assets:</strong>`;
+                        outputsHtml += `<ul class="list-disc list-inside ml-1 space-y-1 mt-1">`;
+                        output.multi_assets.forEach(asset => {
+                            const assetNameDisplay = decodeHexToUtf8(asset.asset_name);
+                            const quantityDisplay = asset.quantity ? BigInt(asset.quantity).toLocaleString() : '0';
+                            outputsHtml += `<li class="font-mono text-blue-700 text-xs" title="Policy: ${asset.policy}"><span class="font-semibold text-black">${quantityDisplay}</span> x ${assetNameDisplay}</li>`;
+                        });
+                        outputsHtml += `</ul></div>`;
+                    }
+
+                    if(output.data_hash) { outputsHtml += `<p class="mt-1"><strong>Datum Hash:</strong> <span class="font-mono text-gray-600">${output.data_hash}</span></p>`; }
+                    outputsHtml += '</div>';
+                });
+                outputsHtml += '</div>';
+            } else { outputsHtml += '<p class="text-gray-500">No outputs found for this transaction.</p>'; }
+
+            // --- Render Metadata Section ---
+            let metadataHtml = '<h3 class="text-lg font-semibold mt-6 mb-3">Metadata</h3>';
+            if (txData.metadata && txData.metadata.length > 0) {
+                 metadataHtml += '<div class="space-y-3">';
+                 txData.metadata.forEach(meta => {
+                     metadataHtml += `<div class="border rounded-md p-3 bg-gray-50 text-xs md:text-sm shadow-sm">`;
+                     metadataHtml += `<p class="mb-1 font-semibold text-gray-800">Label: ${meta.label}</p>`;
+                     metadataHtml += `<pre class="bg-gray-200 p-2 rounded overflow-auto text-xs"><code>${JSON.stringify(meta.json_value, null, 2)}</code></pre>`;
+                     if(meta.bytes_value) { metadataHtml += `<p class="mt-1 font-mono break-all">Bytes: ${meta.bytes_value}</p>`;}
+                     metadataHtml += `</div>`;
+                 });
+                 metadataHtml += '</div>';
+            } else {
+                metadataHtml += '<p class="text-gray-500">No metadata found for this transaction.</p>';
+            }
+
+            // --- Render Withdrawals Section ---
+             let withdrawalsHtml = '';
+             if (txData.withdrawals && txData.withdrawals.length > 0) {
+                withdrawalsHtml += '<h3 class="text-lg font-semibold mt-6 mb-3">Withdrawals</h3>';
+                withdrawalsHtml += '<div class="space-y-3">';
+                 txData.withdrawals.forEach(wd => {
+                     withdrawalsHtml += `<div class="border rounded-md p-3 bg-gray-50 text-xs md:text-sm shadow-sm">`;
+                     withdrawalsHtml += `<p><strong>Stake Address:</strong> <a href="#stake/${wd.stake_address}" class="text-indigo-600 hover:underline font-mono">${wd.stake_address}</a></p>`;
+                     withdrawalsHtml += `<p><strong>Amount:</strong> <span class="font-semibold text-purple-700">${formatAda(wd.amount_lovelace)} ADA</span></p>`;
+                     withdrawalsHtml += `</div>`;
+                 });
+                withdrawalsHtml += '</div>';
+             }
+
+            // --- Render Certificates Section ---
+             let certificatesHtml = '';
+             if (txData.certificates && txData.certificates.length > 0) {
+                 certificatesHtml += '<h3 class="text-lg font-semibold mt-6 mb-3">Certificates</h3>';
+                 certificatesHtml += '<div class="space-y-3">';
+                 txData.certificates.forEach(cert => {
+                    certificatesHtml += `<div class="border rounded-md p-3 bg-gray-50 text-xs md:text-sm shadow-sm">`;
+                    certificatesHtml += `<p class="mb-1 font-semibold text-gray-800 capitalize">${cert.type.replace(/_/g, ' ')}</p>`;
+                    if (cert.stake_address) { certificatesHtml += `<p><strong>Stake Address:</strong> <a href="#stake/${cert.stake_address}" class="text-indigo-600 hover:underline font-mono">${cert.stake_address}</a></p>`; }
+                    if (cert.pool_id) { certificatesHtml += `<p><strong>Pool ID:</strong> <a href="#spo/${cert.pool_id}" class="spo-link text-indigo-600 hover:underline font-mono" data-poolid="${cert.pool_id}">${cert.pool_id}</a></p>`; }
+                    if (cert.drep_id) { certificatesHtml += `<p><strong>DRep ID:</strong> <a href="#drep/${cert.drep_id}" class="drep-link text-indigo-600 hover:underline font-mono" data-drepid="${cert.drep_id}">${cert.drep_id}</a></p>`; }
+                    if (cert.deposit) { certificatesHtml += `<p><strong>Deposit:</strong> ${formatAda(cert.deposit)} ADA</p>`; }
+                    if (cert.deposit_refund) { certificatesHtml += `<p><strong>Deposit Refund:</strong> ${formatAda(cert.deposit_refund)} ADA</p>`; }
+                    if (cert.pledge) { certificatesHtml += `<p><strong>Pledge:</strong> ${formatAda(cert.pledge)} ADA</p>`; }
+                    if (cert.margin !== null && cert.margin !== undefined) { certificatesHtml += `<p><strong>Margin:</strong> ${(cert.margin * 100).toFixed(4)}%</p>`; }
+                    if (cert.fixed_cost) { certificatesHtml += `<p><strong>Fixed Cost:</strong> ${formatAda(cert.fixed_cost)} ADA</p>`; }
+                    if (cert.registration_epoch) { certificatesHtml += `<p><strong>Registration Epoch:</strong> ${cert.registration_epoch}</p>`; }
+                    if (cert.deregistration_epoch) { certificatesHtml += `<p><strong>Deregistration Epoch:</strong> ${cert.deregistration_epoch}</p>`; }
+                    if (cert.retiring_epoch) { certificatesHtml += `<p><strong>Retiring Epoch:</strong> ${cert.retiring_epoch}</p>`; }
+                    certificatesHtml += `</div>`;
+                 });
+                 certificatesHtml += '</div>';
+             }
+
+            // Combine all sections into the main content area
+            txDetailContent.innerHTML = summaryHtml + inputsHtml + outputsHtml + metadataHtml + withdrawalsHtml + certificatesHtml;
+
+        } catch(error) {
+            console.error(`Error fetching tx details for ${txHash}:`, error);
+            showError(`Tx Details: ${error.message}`, 'error-message');
+            txDetailContent.innerHTML = `<p class="text-red-600">Could not load details for transaction ${formatHash(txHash)}.</p>`;
+        } finally { hideLoading(); }
+    }
+
+    /** Fetches and displays details for a specific Governance Action and its votes */
+    async function showGovActionDetails(txHash, index, votePage = 1) {
+        govActionDetailSection.dataset.currentTxHash = txHash;
+        govActionDetailSection.dataset.currentIndex = index;
+        paginationState['gov-action-detail-section'] = { currentPage: votePage, totalPages: 1, limit: 50, apiUrl: `${API_BASE}/gov/actions/${txHash}/${index}/votes` };
+        setActiveSection('gov-action-detail-section');
+        showLoading('gov-action-detail-section', `Loading details for proposal ${formatHash(txHash)}[${index}]...`);
+        govActionDetailContent.innerHTML = ''; // Clear basic details
+        govActionSpecificDetails.innerHTML = ''; // Clear specific details
+        govActionVotesTableBody.innerHTML = ''; // Clear votes
+
+        let proposalDetails = null; // To store combined details
+
+        // --- Fetch Proposal Details from dedicated endpoint ---
+        try {
+            const detailApiUrl = `${API_BASE}/gov/actions/${txHash}/${index}/details`;
+            const response = await fetch(detailApiUrl);
+            if (!response.ok) {
+                let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ }
+                if (response.status === 404) { throw new Error(`Proposal ${formatHash(txHash)}[${index}] details not found.`); }
+                throw new Error(`HTTP error fetching details! Status: ${response.status} - ${errorData?.error || response.statusText}`);
+            }
+            proposalDetails = await response.json(); // Store the fetched details
+
+            // Render Basic Details
+            govActionDetailContent.innerHTML = `
+                <p><strong>Type:</strong> ${proposalDetails.type || 'N/A'}</p>
+                <p><strong>Proposal Tx:</strong> <a href="#tx/${proposalDetails.proposal_tx_hash}" class="tx-link text-indigo-600 hover:text-indigo-800 hover:underline font-mono" data-txhash="${proposalDetails.proposal_tx_hash}">${formatHash(proposalDetails.proposal_tx_hash)}</a> [${proposalDetails.proposal_index}]</p>
+                <p><strong>Proposed Epoch:</strong> ${proposalDetails.proposal_epoch || 'N/A'}</p>
+                <p><strong>Expiration Epoch:</strong> ${proposalDetails.proposal_expiration || 'N/A'}</p>
+                <p><strong>Deposit:</strong> ${formatAda(proposalDetails.deposit)} ADA</p>
+                <p><strong>Return Address:</strong> <span class="font-mono text-xs">${proposalDetails.return_address_bech32 || 'N/A'}</span></p>
+                <p><strong>Anchor:</strong> ${createAnchorLink(proposalDetails.anchor_url, proposalDetails.anchor_data_hash)}</p>
+                <p><strong>Block Time:</strong> ${formatTimestamp(proposalDetails.proposal_block_time)}</p>
+            `;
+
+            // Render Specific Details
+            renderSpecificActionDetails(proposalDetails.type, proposalDetails.specific_details);
+
+        } catch (error) {
+            console.error(`Error fetching details for proposal ${txHash}[${index}]:`, error);
+            showError(error.message); // Show error message
+            govActionDetailContent.innerHTML = `<p class="text-red-600">Could not load details for proposal ${formatHash(txHash)}[${index}].</p>`;
+            hideLoading(); // Hide loading if detail fetch fails
+            return; // Stop processing if details fail
+        }
+
+
+        // --- Fetch Votes for the Proposal ---
+        const votesApiUrl = `${paginationState['gov-action-detail-section'].apiUrl}?page=${votePage}&limit=${paginationState['gov-action-detail-section'].limit}`;
+        try {
+            const response = await fetch(votesApiUrl);
+             if (!response.ok) { let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ } if (response.status === 404) { /* Don't throw error, just show no votes */ } else { throw new Error(`HTTP error fetching votes! Status: ${response.status} - ${errorData?.error || response.statusText}`); } }
+             const data = response.ok ? await response.json() : { votes: [], totalPages: 1 }; // Handle 404 gracefully for votes
+             paginationState['gov-action-detail-section'].totalPages = data.totalPages || 1;
+             renderGovActionVotes(data);
+             updatePaginationControls('gov-action-detail-section');
+        } catch (error) { console.error(`Error fetching votes for proposal ${txHash}[${index}]:`, error); showError(error.message); renderNoDataRow(govActionVotesTableBody, 5); updatePaginationControls('gov-action-detail-section');
+        } finally { hideLoading(); } // Hide loading after votes are fetched (or failed)
+    }
+
+    /**
+     * Renders the specific details section based on action type.
+     * @param {string} type - The governance action type.
+     * @param {object | Array | null} details - The specific details data from the backend.
+     */
+    function renderSpecificActionDetails(type, details) {
+        let html = `<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-800">Action Specific Details</h3>`;
+        html += `<div class="detail-box space-y-1 text-xs md:text-sm">`; // Use detail-box styling
+
+        if (!details || details.error) {
+            html += `<p class="text-red-500">Error loading specific details: ${details?.error || 'Unknown error'}</p>`;
+        } else if (details.note) {
+             html += `<p class="text-gray-600 italic">${details.note}</p>`;
+        } else {
+            switch (type) {
+                case 'ParameterChange':
+                    // Display relevant protocol parameters
+                    // Example - adjust based on actual columns in param_proposal
+                    html += `<p><strong>Min Fee A:</strong> ${details.min_fee_a ?? 'N/A'}</p>`;
+                    html += `<p><strong>Min Fee B:</strong> ${details.min_fee_b ?? 'N/A'}</p>`;
+                    html += `<p><strong>Max Block Size:</strong> ${details.max_block_size?.toLocaleString() ?? 'N/A'} bytes</p>`;
+                    html += `<p><strong>Max Tx Size:</strong> ${details.max_tx_size?.toLocaleString() ?? 'N/A'} bytes</p>`;
+                    html += `<p><strong>Max BH Size:</strong> ${details.max_bh_size?.toLocaleString() ?? 'N/A'} bytes</p>`;
+                    html += `<p><strong>Key Deposit:</strong> ${formatAda(details.key_deposit)} ADA</p>`;
+                    html += `<p><strong>Pool Deposit:</strong> ${formatAda(details.pool_deposit)} ADA</p>`;
+                    // Add other parameters as needed (e_max, n_opt, a0, rho, tau, etc.)
+                    html += `<p><strong>Cost Models Hash:</strong> <span class="font-mono text-xs">${details.cost_model_hash ? formatHash(details.cost_model_hash, 12) : 'N/A'}</span></p>`;
+                    html += `<p><i>(Displaying common parameters. Full list depends on db-sync schema)</i></p>`;
+                    break;
+                case 'HardForkInitiation':
+                    html += `<p><strong>Proposed Protocol Version:</strong> ${details.protocol_major ?? '?'}.${details.protocol_minor ?? '?'}</p>`;
+                    break;
+                case 'TreasuryWithdrawals':
+                    if (Array.isArray(details) && details.length > 0) {
+                        html += `<strong>Withdrawals:</strong><ul class="list-disc list-inside ml-4">`;
+                        details.forEach(wd => {
+                            html += `<li><span class="font-mono">${wd.stake_address}</span>: ${formatAda(wd.amount_lovelace)} ADA</li>`;
+                        });
+                        html += `</ul>`;
+                    } else {
+                        html += `<p>No treasury withdrawals specified.</p>`;
+                    }
+                    break;
+                case 'NewConstitution':
+                    html += `<p><strong>Constitution Script Hash:</strong> <span class="font-mono text-xs">${details.constitution_script_hash ? formatHash(details.constitution_script_hash, 15) : 'N/A'}</span></p>`;
+                    break;
+                case 'UpdateCommittee':
+                    // Display based on the placeholder structure (needs adjustment based on actual backend query)
+                    if (details.members_added && Array.isArray(details.members_added) && details.members_added.length > 0) {
+                         html += `<strong>Members Added:</strong><ul class="list-disc list-inside ml-4">`;
+                         details.members_added.forEach(add => {
+                             html += `<li><span class="font-mono text-xs">${formatHash(add.member_hash, 15)}</span> (Epoch ${add.epoch ?? '?'})</li>`;
+                         });
+                         html += `</ul>`;
+                    } else {
+                         html += `<p>No members added.</p>`;
+                    }
+                     if (details.members_removed && Array.isArray(details.members_removed) && details.members_removed.length > 0) {
+                         html += `<strong class="mt-2 block">Members Removed:</strong><ul class="list-disc list-inside ml-4">`;
+                         details.members_removed.forEach(rem => {
+                             html += `<li><span class="font-mono text-xs">${formatHash(rem.member_hash, 15)}</span></li>`;
+                         });
+                         html += `</ul>`;
+                    } else {
+                         html += `<p>No members removed.</p>`;
+                    }
+                     html += `<p class="mt-2"><strong>New Threshold:</strong> ${details.threshold || 'N/A'}</p>`;
+                    break;
+                // No specific details needed for NoConfidence or InfoAction based on current backend logic
+                // Add cases for other types if implemented
+                default:
+                    html += `<p>No specific display implemented for type: ${type}</p>`;
+                    // Optionally display raw JSON for unhandled types
+                    html += `<pre class="bg-gray-200 p-2 rounded overflow-auto text-xs mt-2"><code>${JSON.stringify(details, null, 2)}</code></pre>`;
+            }
+        }
+        html += `</div>`; // Close detail-box
+        govActionSpecificDetails.innerHTML = html; // Add to the specific details container
+    }
+
+
+    /** Fetches and displays votes for a specific CC Member hash */
+    async function showCCVotes(ccHash, page = 1) {
+        ccVotesSection.dataset.currentCcHash = ccHash;
+        paginationState['cc-votes-section'] = { currentPage: page, totalPages: 1, limit: 50, apiUrl: `${API_BASE}/gov/cc/${ccHash}/votes` };
+        setActiveSection('cc-votes-section');
+        showLoading('cc-votes-section', `Loading votes for CC Member ${formatHash(ccHash)}...`);
+        ccVotesTableBody.innerHTML = '';
+        const apiUrl = `${paginationState['cc-votes-section'].apiUrl}?page=${page}&limit=${paginationState['cc-votes-section'].limit}`;
+
+        try {
+            const response = await fetch(apiUrl);
+             if (!response.ok) { let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ } if (response.status === 404) { throw new Error(`CC Member ${formatHash(ccHash)} not found or has no votes recorded yet.`); } throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`); }
+            const data = await response.json();
+            paginationState['cc-votes-section'].totalPages = data.totalPages || 1;
+            renderCCVotes(data, ccHash);
+            updatePaginationControls('cc-votes-section');
+        } catch (error) { console.error(`Error fetching votes for CC Member ${ccHash}:`, error); showError(error.message); ccVotesHeader.textContent = `Could not load votes for CC Member: ${formatHash(ccHash)}`; renderNoDataRow(ccVotesTableBody, 6); updatePaginationControls('cc-votes-section');
+        } finally { hideLoading(); }
+    }
+
+    /** Fetches and displays votes for a specific DRep ID (Bech32 or Hex) */
+    async function showDRepVotes(drepId, page = 1) {
+        drepVotesSection.dataset.currentDrepId = drepId;
+        paginationState['drep-votes-section'] = { currentPage: page, totalPages: 1, limit: 50, apiUrl: `${API_BASE}/gov/dreps/${drepId}/votes` };
+        setActiveSection('drep-votes-section');
+        showLoading('drep-votes-section', `Loading votes for DRep ${formatHash(drepId, 15)}...`);
+        drepVotesTableBody.innerHTML = '';
+        const apiUrl = `${paginationState['drep-votes-section'].apiUrl}?page=${page}&limit=${paginationState['drep-votes-section'].limit}`;
+
+        try {
+            const response = await fetch(apiUrl);
+             if (!response.ok) { let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ } if (response.status === 404) { throw new Error(`DRep ${formatHash(drepId, 15)} not found or has no votes recorded yet.`); } throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`); }
+            const data = await response.json();
+            paginationState['drep-votes-section'].totalPages = data.totalPages || 1;
+            const displayId = data.drep_id_bech32 || drepId; // Use Bech32 from response if available
+            renderDRepVotes(data, displayId);
+            updatePaginationControls('drep-votes-section');
+        } catch (error) { console.error(`Error fetching votes for DRep ${drepId}:`, error); showError(error.message); drepVotesHeader.textContent = `Could not load votes for DRep: ${formatHash(drepId, 15)}`; renderNoDataRow(drepVotesTableBody, 6); updatePaginationControls('drep-votes-section');
+        } finally { hideLoading(); }
+    }
+
+    /** Fetches and displays votes for a specific SPO Pool ID (Bech32 or Hex) */
+    async function showSPOVotes(poolId, page = 1) {
+        spoVotesSection.dataset.currentPoolId = poolId;
+        paginationState['spo-votes-section'] = { currentPage: page, totalPages: 1, limit: 50, apiUrl: `${API_BASE}/gov/spos/${poolId}/votes` };
+        setActiveSection('spo-votes-section');
+        showLoading('spo-votes-section', `Loading votes for SPO ${formatHash(poolId, 15)}...`);
+        spoVotesTableBody.innerHTML = '';
+        const apiUrl = `${paginationState['spo-votes-section'].apiUrl}?page=${page}&limit=${paginationState['spo-votes-section'].limit}`;
+
+        try {
+            const response = await fetch(apiUrl);
+             if (!response.ok) { let errorData; try { errorData = await response.json(); } catch (e) { /* ignore */ } if (response.status === 404) { throw new Error(`SPO ${formatHash(poolId, 15)} not found or has no votes recorded yet.`); } throw new Error(`HTTP error! Status: ${response.status} - ${errorData?.error || response.statusText}`); }
+            const data = await response.json();
+            paginationState['spo-votes-section'].totalPages = data.totalPages || 1;
+             const displayId = data.pool_id_bech32 || poolId; // Use Bech32 from response if available
+            renderSPOVotes(data, displayId);
+            updatePaginationControls('spo-votes-section');
+        } catch (error) { console.error(`Error fetching votes for SPO ${poolId}:`, error); showError(error.message); spoVotesHeader.textContent = `Could not load votes for SPO: ${formatHash(poolId, 15)}`; renderNoDataRow(spoVotesTableBody, 6); updatePaginationControls('spo-votes-section');
+        } finally { hideLoading(); }
+    }
+
+    /** Renders a 'No data' row in a table body */
+    function renderNoDataRow(tbody, colspan) {
+         const row = tbody.insertRow();
+         const cell = row.insertCell();
+         cell.colSpan = colspan;
+         cell.textContent = 'No data found.';
+         cell.classList.add('text-center', 'text-gray-500', 'py-4', 'italic');
+    }
+
+    /** Updates pagination buttons and info display for a given section */
+    function updatePaginationControls(sectionId) {
+        const state = paginationState[sectionId];
+        if (!state) return; // No state defined for this section
+
+        // Construct IDs dynamically
+        const controlsId = sectionId.replace('-section', '-pagination-controls');
+        const infoId = sectionId.replace('-section', '-pagination-info');
+        const prevBtnId = sectionId.replace('-section', '-prev-button');
+        const nextBtnId = sectionId.replace('-section', '-next-button');
+
+        const controlsDiv = document.getElementById(controlsId);
+        const infoDiv = document.getElementById(infoId);
+        const prevBtn = document.getElementById(prevBtnId);
+        const nextBtn = document.getElementById(nextBtnId);
+
+        if (controlsDiv && infoDiv && prevBtn && nextBtn) {
+            if (state.totalPages > 1) {
+                 controlsDiv.style.display = 'flex'; // Show controls only if multiple pages
+                 infoDiv.textContent = `Page ${state.currentPage} of ${state.totalPages}`;
+                 prevBtn.disabled = state.currentPage <= 1;
+                 nextBtn.disabled = state.currentPage >= state.totalPages;
+            } else {
+                 controlsDiv.style.display = 'none'; // Hide controls if only one page
+            }
+        }
+    }
+
+    /** Sets the currently active section, updates nav links, and fetches data */
+    function setActiveSection(sectionId) {
+        errorMessageDiv.classList.add('hidden'); // Clear errors on navigation
+        contentSections.forEach(section => section.classList.remove('active'));
+        navLinks.forEach(link => link.classList.remove('active'));
+
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active');
+            currentSection = sectionId; // Update global state
+
+            // Highlight the corresponding nav link
+            const targetLink = document.querySelector(`.nav-link[data-section="${sectionId}"]`);
+             if(targetLink) targetLink.classList.add('active');
+
+            // Fetch data for list views automatically when activated
+            // Handle transactions-section specifically: fetch list only if no hash
+            if (paginationState[sectionId] && paginationState[sectionId].apiUrl &&
+                !sectionId.includes('-votes-') && sectionId !== 'gov-action-detail-section' &&
+                sectionId !== 'transactions-section' && sectionId !== 'home-section') { // Exclude home
+                 fetchData(sectionId, paginationState[sectionId].currentPage);
+            } else if (sectionId === 'sync-status-section') {
+                 fetchSyncStatus();
+            } else if (sectionId === 'transactions-section' && !window.location.hash.startsWith('#tx/')) {
+                 // Show the list view and fetch data if navigating to #transactions
+                 txListView.classList.remove('hidden');
+                 txDetailView.classList.add('hidden');
+                 fetchData(sectionId, paginationState[sectionId].currentPage);
+            } else if (sectionId === 'transactions-section' && window.location.hash.startsWith('#tx/')) {
+                 // If navigating directly to a tx detail, hide the list view
+                 txListView.classList.add('hidden');
+                 txDetailView.classList.remove('hidden');
+                 // Detail fetching is handled by handleHashChange -> showTransactionDetails
+            } else if (sectionId === 'home-section') {
+                 // Clear loading, ensure home content is visible (already in HTML)
+                 hideLoading();
+                 txListView.classList.add('hidden');
+                 txDetailView.classList.add('hidden');
+            }
+
+        } else {
+            console.error("Target section not found:", sectionId, "Defaulting to home-section.");
+            setActiveSection('home-section'); // Fallback to default (home)
+        }
+    }
+
+    // --- Event Listeners ---
+
+    // Navigation Link Clicks
+    navLinks.forEach(link => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            const sectionId = link.getAttribute('data-section');
+            setActiveSection(sectionId);
+            window.location.hash = link.getAttribute('href');
+        });
+    });
+
+    // Pagination Button Clicks (Generic Handler)
+    document.querySelectorAll('.pagination-controls').forEach(controls => {
+        const sectionId = controls.id.replace('-pagination-controls', '-section');
+        const prevBtn = controls.querySelector('.pagination-button:first-of-type');
+        const nextBtn = controls.querySelector('.pagination-button:last-of-type');
+        const state = paginationState[sectionId];
+
+        if (prevBtn && state) {
+             prevBtn.addEventListener('click', () => {
+                 if (state.currentPage > 1) {
+                     const newPage = state.currentPage - 1;
+                     if (sectionId === 'drep-votes-section') { showDRepVotes(drepVotesSection.dataset.currentDrepId, newPage); }
+                     else if (sectionId === 'cc-votes-section') { showCCVotes(ccVotesSection.dataset.currentCcHash, newPage); }
+                     else if (sectionId === 'spo-votes-section') { showSPOVotes(spoVotesSection.dataset.currentPoolId, newPage); }
+                     else if (sectionId === 'gov-action-detail-section') { showGovActionDetails(govActionDetailSection.dataset.currentTxHash, govActionDetailSection.dataset.currentIndex, newPage); }
+                     else { fetchData(sectionId, newPage); } // Default list view fetch (includes tx list)
+                 }
+             });
+        }
+         if (nextBtn && state) {
+             nextBtn.addEventListener('click', () => {
+                  if (state.currentPage < state.totalPages) {
+                     const newPage = state.currentPage + 1;
+                     if (sectionId === 'drep-votes-section') { showDRepVotes(drepVotesSection.dataset.currentDrepId, newPage); }
+                     else if (sectionId === 'cc-votes-section') { showCCVotes(ccVotesSection.dataset.currentCcHash, newPage); }
+                     else if (sectionId === 'spo-votes-section') { showSPOVotes(spoVotesSection.dataset.currentPoolId, newPage); }
+                     else if (sectionId === 'gov-action-detail-section') { showGovActionDetails(govActionDetailSection.dataset.currentTxHash, govActionDetailSection.dataset.currentIndex, newPage); }
+                     else { fetchData(sectionId, newPage); } // Default list view fetch (includes tx list)
+                 }
+             });
+         }
+    });
+
+    // Delegated Event Listener for Clicks within the main content area
+    document.querySelector('main').addEventListener('click', (event) => {
+        const txLink = event.target.closest('a.tx-link');
+        const drepLink = event.target.closest('a.drep-link');
+        const ccLink = event.target.closest('a.cc-link');
+        const spoLink = event.target.closest('a.spo-link');
+        const actionRow = event.target.closest('tr.action-row');
+        const txRow = event.target.closest('tr.tx-row'); // Listener for tx list rows
+
+        if (actionRow) {
+             const txHash = actionRow.dataset.txhash;
+             const index = actionRow.dataset.index;
+             if (txHash && index !== undefined) {
+                 event.preventDefault();
+                 console.log("Action Row clicked!", txHash, index);
+                 showGovActionDetails(txHash, index);
+                  window.location.hash = `action/${txHash}/${index}`;
+             }
+        } else if (txRow) { // Handle click on transaction list row
+             const txHash = txRow.dataset.txhash;
+             if (txHash) {
+                 event.preventDefault();
+                 showTransactionDetails(txHash);
+                 window.location.hash = `tx/${txHash}`;
+             }
+        } else if (txLink) { // Handle explicit tx links (e.g., from vote lists)
+             event.preventDefault();
+             const txHash = txLink.dataset.txhash;
+             if (txHash) {
+                 showTransactionDetails(txHash);
+                 window.location.hash = `tx/${txHash}`;
+             }
+        } else if (drepLink) {
+             event.preventDefault();
+             const drepId = drepLink.dataset.drepid;
+             if (drepId) {
+                 showDRepVotes(drepId);
+                 window.location.hash = `drep/${drepId}`;
+             }
+        } else if (ccLink) {
+             event.preventDefault();
+             const ccHash = ccLink.dataset.cchash;
+             if (ccHash) {
+                 showCCVotes(ccHash);
+                 window.location.hash = `cc/${ccHash}`;
+             }
+        } else if (spoLink) {
+             event.preventDefault();
+             const poolId = spoLink.dataset.poolid;
+             if (poolId) {
+                 showSPOVotes(poolId);
+                 window.location.hash = `spo/${poolId}`;
+             }
+        }
+        // Add clicks for stake address links, block links etc. here later
+    });
+
+    // Back Button Listeners
+    backToDrepsButton.addEventListener('click', () => { setActiveSection('dreps-section'); window.location.hash = 'dreps'; });
+    backToCcButton.addEventListener('click', () => { setActiveSection('cc-members-section'); window.location.hash = 'cc-members'; });
+    backToSposButton.addEventListener('click', () => { setActiveSection('spos-section'); window.location.hash = 'spos'; });
+    backToActionsButton.addEventListener('click', () => { setActiveSection('gov-actions-section'); window.location.hash = 'gov-actions'; });
+    backToTxListButton.addEventListener('click', () => { // Listener for back to tx list
+        txDetailView.classList.add('hidden');
+        txListView.classList.remove('hidden');
+        setActiveSection('transactions-section'); // Re-activate to potentially re-fetch list if needed
+        window.location.hash = 'transactions';
+    });
+
+
+    // --- URL Hash Routing on Initial Load & Hash Change ---
+    function handleHashChange() {
+        const hash = window.location.hash.substring(1);
+        let sectionId = 'home-section'; // Default to home
+        let detailId = null; let detailIndex = null;
+
+        if (hash && hash !== 'home') { // Check if hash is not empty or just #home
+            const parts = hash.split('/');
+            const sectionName = parts[0];
+
+            // Try matching simple section names first (e.g., #dreps -> dreps-section)
+            const potentialSectionId = `${sectionName}-section`;
+            if (document.getElementById(potentialSectionId)) {
+                 sectionId = potentialSectionId;
+                 if (parts.length > 1) detailId = parts[1]; // Capture ID if present (e.g., #dreps/drep1...)
+            }
+            // Handle specific detail view routes
+            else if (sectionName === 'action' && parts.length > 2) { sectionId = 'gov-action-detail-section'; detailId = parts[1]; detailIndex = parts[2]; }
+            else if (sectionName === 'tx' && parts.length > 1) { sectionId = 'transactions-section'; detailId = parts[1]; } // Keep section as transactions
+            else if (sectionName === 'drep' && parts[1]) { sectionId = 'drep-votes-section'; detailId = parts[1]; }
+            else if (sectionName === 'cc' && parts[1]) { sectionId = 'cc-votes-section'; detailId = parts[1]; }
+            else if (sectionName === 'spo' && parts[1]) { sectionId = 'spo-votes-section'; detailId = parts[1]; }
+            // Add routes for block, stake address etc. here
+        }
+
+        // Activate the determined section
+        setActiveSection(sectionId);
+
+        // If a detail ID was found, call the appropriate function to load details
+        if (detailId) {
+            if (sectionId === 'drep-votes-section') showDRepVotes(detailId);
+            else if (sectionId === 'cc-votes-section') showCCVotes(detailId);
+            else if (sectionId === 'spo-votes-section') showSPOVotes(detailId);
+            else if (sectionId === 'transactions-section') showTransactionDetails(detailId); // Handles tx details
+            else if (sectionId === 'gov-action-detail-section' && detailIndex !== null) showGovActionDetails(detailId, detailIndex);
+            // Add calls for block details, stake address details etc. here
+        } else if (sectionId === 'transactions-section') {
+             // If navigating to #transactions (no hash), ensure list view is shown
+             txListView.classList.remove('hidden');
+             txDetailView.classList.add('hidden');
+             // Fetch data if not already loaded or if forced refresh needed
+             if (!paginationState[sectionId].data) {
+                 fetchData(sectionId, paginationState[sectionId].currentPage);
+             }
+        }
+    }
+
+    // Initial Load: Handle hash on page load
+    document.addEventListener('DOMContentLoaded', handleHashChange);
+
+    // Handle hash changes after initial load (e.g., browser back/forward)
+    window.addEventListener('hashchange', handleHashChange);
+
+</script>
+
+</body>
+</html>
+```
